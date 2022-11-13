@@ -686,7 +686,7 @@ EOD;
 				@chmod($ph1certfile, 0600);
 
 				/* XXX" Traffic selectors? */
-				$pskconf .= " : RSA {$ph1keyfile}\n";
+				$pskconf .= " : ECDSA {$ph1keyfile}\n";
 			} else {
 				list ($myid_type, $myid_data) = ipsec_find_id($ph1ent, 'local');
 				list ($peerid_type, $peerid_data) = ipsec_find_id($ph1ent, 'peer', $rgmap);
