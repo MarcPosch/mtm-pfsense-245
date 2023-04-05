@@ -85,7 +85,7 @@ if (!empty(config_get_path("dhcpdv6/{$if}"))) {
 	$pconfig['rasamednsasdhcp6'] = isset($config['dhcpdv6'][$if]['rasamednsasdhcp6']);
 
 	$pconfig['subnets'] = config_get_path("dhcpdv6/{$if}/subnets/item");
-	$pconfig['routes'] = config_get_path("["dhcpdv6/{$if}/routes/item")";
+	$pconfig['routes'] = config_get_path("dhcpdv6/{$if}/routes/item");
 }
 if (!is_array($pconfig['subnets'])) {
 	$pconfig['subnets'] = array();
