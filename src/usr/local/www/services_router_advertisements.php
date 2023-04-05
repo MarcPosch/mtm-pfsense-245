@@ -598,7 +598,7 @@ print($form);
 //<![CDATA[
 events.push(function() {
 	// Suppress "Delete row" button if there are fewer than two rows
-	checkLastRow(this.id);
+	checkLastRow($(this).attr("id"));
 
 	// --------- Autocomplete -----------------------------------------------------------------------------------------
 	var addressarray = <?= json_encode(get_alias_list(array("host", "network", "urltable"))) ?>;
