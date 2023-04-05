@@ -181,7 +181,7 @@ if ($_POST['save']) {
 		} else {
 			$pconfig['routes'][] = array('destination' => $address . "/" . $bits, 'priority' => $priority);
 			if (!is_ipaddrv6($address)) {
-				$input_errors[] = sprintf(gettext("An invalid route was specified. [%s/%s]"), $address, $bits);
+				$input_errors[] = sprintf(gettext("An invalid route was specified. [%1$s/%2$s]"), $address, $bits);
 			}
 		}
 	}
@@ -283,11 +283,6 @@ if ($_POST['save']) {
 			$config['dhcpdv6'][$if]['routes']['item'] = $pconfig['routes'];
 		} else {
 			config_del_path("dhcpdv6/{$if}/routes");
-		}
-		if (count($pconfig['routes'])) {
-			$config['dhcpdv6'][$if]['routes']['item'] = $pconfig['routes'];
-		} else {
-			unset($config['dhcpdv6'][$if]['routes']);
 		}
 
 		write_config("Router Advertisements settings saved");
