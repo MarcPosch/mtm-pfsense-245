@@ -26,8 +26,8 @@
  */
 
 
-define('DYNDNS_PROVIDER_VALUES', 'all-inkl azure azurev6 citynetwork cloudflare cloudflare-v6 cloudns custom custom-v6 desec desec-v6 digitalocean digitalocean-v6 dnsexit dnsimple dnsimple-v6 dnsmadeeasy dnsomatic domeneshop domeneshop-v6 dreamhost dreamhost-v6 duiadns duiadns-v6 dyfi dyndns dyndns-custom dyndns-static dyns dynv6 dynv6-v6 easydns easydns-v6 eurodns freedns freedns-v6 freedns2 freedns2-v6 glesys gandi-livedns gandi-livedns-v6 godaddy godaddy-v6 googledomains gratisdns he-net he-net-v6 he-net-tunnelbroker hover linode linode-v6 loopia mythicbeasts mythicbeasts-v6 name.com name.com-v6 namecheap nicru nicru-v6 noip noip-v6 noip-free noip-free-v6 onecom onecom-v6 ods opendns ovh-dynhost route53 route53-v6 selfhost spdyn spdyn-v6 strato yandex yandex-v6 zoneedit');
-define('DYNDNS_PROVIDER_DESCRIPTIONS', 'All-Inkl.com,Azure DNS,Azure DNS (v6),City Network,Cloudflare,Cloudflare (v6),ClouDNS,Custom,Custom (v6),deSEC,deSEC (v6),DigitalOcean,DigitalOcean (v6),DNSexit,DNSimple,DNSimple (v6),DNS Made Easy,DNS-O-Matic,Domeneshop,Domeneshop (v6),DreamHost,Dreamhost (v6),DuiaDns.net,DuiaDns.net (v6),DY.fi,DynDNS (dynamic),DynDNS (custom),DynDNS (static),DyNS,Dynv6,Dynv6 (v6),easyDNS,easyDNS (v6),Euro Dns,freeDNS,freeDNS (v6),freeDNS API Version 2, freeDNS API Version 2 (v6),GleSYS,Gandi Live DNS,Gandi Live DNS (v6),GoDaddy,GoDaddy (v6),Google Domains,GratisDNS,HE.net,HE.net (v6),HE.net Tunnelbroker,Hover,Linode,Linode (v6),Loopia,Mythic Beasts,Mythic Beasts (v6),Name.com,Name.com (v6),Namecheap,NIC.RU,NIC.RU (v6),No-IP,No-IP (v6),No-IP (free),No-IP (free-v6),One.com,One.com (v6),ODS.org,OpenDNS,OVH DynHOST,Route 53,Route 53 (v6),SelfHost,SPDYN,SPDYN (v6),Strato,Yandex,Yandex (v6),ZoneEdit');
+define('DYNDNS_PROVIDER_VALUES', 'all-inkl azure azurev6 citynetwork cloudflare cloudflare-v6 cloudns custom custom-v6 desec desec-v6 digitalocean digitalocean-v6 dnsexit dnsimple dnsimple-v6 dnsmadeeasy dnsomatic domeneshop domeneshop-v6 dreamhost dreamhost-v6 duiadns duiadns-v6 dyfi dyndns dyndns-custom dyndns-static dyns dynv6 dynv6-v6 easydns easydns-v6 eurodns freedns freedns-v6 freedns2 freedns2-v6 glesys gandi-livedns gandi-livedns-v6 godaddy godaddy-v6 googledomains gratisdns he-net he-net-v6 he-net-tunnelbroker hover linode linode-v6 loopia mythicbeasts mythicbeasts-v6 name.com name.com-v6 namecheap nicru nicru-v6 noip noip-v6 noip-free noip-free-v6 onecom onecom-v6 ods opendns ovh-dynhost route53 route53-v6 selfhost spdyn spdyn-v6 strato yandex yandex-v6 zoneedit porkbun porkbun-v6');
+define('DYNDNS_PROVIDER_DESCRIPTIONS', 'All-Inkl.com,Azure DNS,Azure DNS (v6),City Network,Cloudflare,Cloudflare (v6),ClouDNS,Custom,Custom (v6),deSEC,deSEC (v6),DigitalOcean,DigitalOcean (v6),DNSexit,DNSimple,DNSimple (v6),DNS Made Easy,DNS-O-Matic,Domeneshop,Domeneshop (v6),DreamHost,Dreamhost (v6),DuiaDns.net,DuiaDns.net (v6),DY.fi,DynDNS (dynamic),DynDNS (custom),DynDNS (static),DyNS,Dynv6,Dynv6 (v6),easyDNS,easyDNS (v6),Euro Dns,freeDNS,freeDNS (v6),freeDNS API Version 2, freeDNS API Version 2 (v6),GleSYS,Gandi Live DNS,Gandi Live DNS (v6),GoDaddy,GoDaddy (v6),Google Domains,GratisDNS,HE.net,HE.net (v6),HE.net Tunnelbroker,Hover,Linode,Linode (v6),Loopia,Mythic Beasts,Mythic Beasts (v6),Name.com,Name.com (v6),Namecheap,NIC.RU,NIC.RU (v6),No-IP,No-IP (v6),No-IP (free),No-IP (free-v6),One.com,One.com (v6),ODS.org,OpenDNS,OVH DynHOST,Route 53,Route 53 (v6),SelfHost,SPDYN,SPDYN (v6),Strato,Yandex,Yandex (v6),ZoneEdit,Porkbun,Porkbun (v6)');
 
 /* implement ipv6 route advertising daemon */
 function services_radvd_configure($blacklist = array()) {
@@ -302,11 +302,11 @@ function services_radvd_configure($blacklist = array()) {
 			if (count($dnslist) > 0) {
 				$dnsstring = implode(" ", $dnslist);
 				if ($dnsstring <> "") {
-					/* 
+					/*
 					 * The value of Lifetime SHOULD by default be at least
 					 * 3 * MaxRtrAdvInterval, where MaxRtrAdvInterval is the
 					 * maximum RA interval as defined in [RFC4861].
-					 * see https://redmine.pfsense.org/issues/11105 
+					 * see https://redmine.pfsense.org/issues/11105
 					 */
 					$radvdconf .= "\tRDNSS {$dnsstring} {\n";
 					$radvdconf .= "\t\tAdvRDNSSLifetime {$raadvdnsslifetime};\n";
@@ -329,9 +329,9 @@ function services_radvd_configure($blacklist = array()) {
 			}
 			$domain = config_get_path('system/domain');
 			if (!empty($dhcpv6ifconf['domain'])) {
-				/* 
+				/*
 				 * Lifetime SHOULD by default be at least 3 * MaxRtrAdvInterval
-				 * see https://redmine.pfsense.org/issues/12173 
+				 * see https://redmine.pfsense.org/issues/12173
 				 */
 				$radvdconf .= "\tDNSSL {$dhcpv6ifconf['domain']} {$searchliststring} {\n";
 				$radvdconf .= "\t\tAdvDNSSLLifetime {$raadvdnsslifetime};\n";
@@ -481,22 +481,12 @@ function services_dhcpd_configure($family = "all", $blacklist = array()) {
 	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}\n");
 	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/dev\n");
 	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/etc\n");
-	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/usr/local/sbin\n");
 	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/var/db\n");
 	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/var/run\n");
-	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/usr\n");
-	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/lib\n");
-	fwrite($fd, "/bin/mkdir -p {$g['dhcpd_chroot_path']}/run\n");
 	fwrite($fd, "/usr/sbin/chown -R dhcpd:_dhcp {$g['dhcpd_chroot_path']}/*\n");
-	fwrite($fd, "/bin/cp -n /lib/libc.so.* {$g['dhcpd_chroot_path']}/lib/\n");
-	fwrite($fd, "/bin/cp -n /usr/local/sbin/dhcpd {$g['dhcpd_chroot_path']}/usr/local/sbin/\n");
-	fwrite($fd, "/bin/chmod a+rx {$g['dhcpd_chroot_path']}/usr/local/sbin/dhcpd\n");
-
-	$status = `/sbin/mount | /usr/bin/grep -v grep | /usr/bin/grep "{$g['dhcpd_chroot_path']}/dev"`;
-	if (!trim($status)) {
-		fwrite($fd, "/sbin/mount -t devfs devfs {$g['dhcpd_chroot_path']}/dev\n");
-	}
+	fwrite($fd, "/sbin/mount -t devfs devfs {$g['dhcpd_chroot_path']}/dev\n");
 	fclose($fd);
+
 	mwexec("/bin/sh {$g['tmp_path']}/dhcpd.sh");
 
 	if ($family == "all" || $family == "inet") {
@@ -574,7 +564,7 @@ function services_dhcpdv4_configure() {
 				    ($item['number'] == 60) &&
 				    (base64_decode($item['value']) == "HTTPClient")) {
 					$httpclient = true;
-				} 
+				}
 				$idx++;
 			}
 		}
@@ -597,7 +587,7 @@ function services_dhcpdv4_configure() {
 						    ($item['number'] == 60) &&
 						    (base64_decode($item['value']) == "HTTPClient")) {
 							$httpclient = true;
-						} 
+						}
 						$idx++;
 					}
 				}
@@ -627,7 +617,7 @@ function services_dhcpdv4_configure() {
 					    ($item['number'] == 60) &&
 					    (base64_decode($item['value']) == "HTTPClient")) {
 						$httpclient = true;
-					} 
+					}
 					$idx++;
 				}
 				if (!empty($sm['uefihttpboot']) && isset($sm['netboot']) && !$httpclient) {
@@ -655,7 +645,7 @@ update-conflict-detection false;
 EOD;
 
 	/* take these settings from the first DHCP configured interface,
-	 * see https://redmine.pfsense.org/issues/10270 
+	 * see https://redmine.pfsense.org/issues/10270
 	 * TODO: Global Settings tab, see https://redmine.pfsense.org/issues/5080 */
 	foreach ($dhcpdcfg as $dhcpif => $dhcpifconf) {
 		if (empty($dhcpifconf)) {
@@ -1068,7 +1058,7 @@ EOPP;
 					    ($item['number'] == 60) &&
 					    (base64_decode($item['value']) == "HTTPClient")) {
 						$httpclient = true;
-					} 
+					}
 					$idx++;
 				}
 			}
@@ -1224,7 +1214,7 @@ EOD;
 				    ($item['number'] == 60) &&
 				    (base64_decode($item['value']) == "HTTPClient")) {
 					$httpclient = true;
-				} 
+				}
 				$idx++;
 			}
 		}
@@ -1273,10 +1263,10 @@ EOD;
 						$expr = "option arch = {$pxe[0]} {\n";
 					}
 					if (!$pxeif) {
-						$dhcpdconf .= "	if " . $expr; 
+						$dhcpdconf .= "	if " . $expr;
 						$pxeif = true;
 					} else {
-						$dhcpdconf .= " else if " . $expr; 
+						$dhcpdconf .= " else if " . $expr;
 					}
 					$dhcpdconf .= "		filename \"{$pxe[1]}\";\n";
 					$dhcpdconf .= "	}";
@@ -1360,7 +1350,7 @@ EOD;
 				if (isset($sm['ddnsupdate'])) {
 					if (($sm['ddnsdomain'] <> "") && ($sm['ddnsdomain'] != $dhcpifconf['ddnsdomain'])) {
 						$smdnscfg .= "	ddns-domainname \"{$sm['ddnsdomain']}\";\n";
-				 		$need_sm_ddns_updates = true;	
+				 		$need_sm_ddns_updates = true;
 					}
 					$smdnscfg .= "	ddns-update-style interim;\n";
 				}
@@ -1413,10 +1403,10 @@ EOD;
 					    ($item['number'] == 60) &&
 					    (base64_decode($item['value']) == "HTTPClient")) {
 						$httpclient = true;
-					} 
+					}
 					$idx++;
 				}
-				if (!empty($poolconf['uefihttpboot']) && isset($poolconf['netboot']) && !$httpclient) {
+				if (!empty($sm['uefihttpboot']) && isset($sm['netboot']) && !$httpclient) {
 					$dhcpdconf .= "	option custom-s_{$dhcpif}_{$i}-{$idx} \"HTTPClient\";\n";
 				}
 
@@ -1461,10 +1451,10 @@ EOD;
 								$expr = "option arch = {$pxe[0]} {\n";
 							}
 							if (!$pxeif) {
-								$dhcpdconf .= "	if " . $expr; 
+								$dhcpdconf .= "	if " . $expr;
 								$pxeif = true;
 							} else {
-								$dhcpdconf .= " else if " . $expr; 
+								$dhcpdconf .= " else if " . $expr;
 							}
 							$dhcpdconf .= "		filename \"{$pxe[1]}\";\n";
 							$dhcpdconf .= "	}";
@@ -1664,6 +1654,8 @@ function services_dhcpdv6_configure($blacklist = array()) {
 	if (isvalidpid("{$g['dhcpd_chroot_path']}{$g['varrun_path']}/dhcpdv6.pid")) {
 		killbypid("{$g['dhcpd_chroot_path']}{$g['varrun_path']}/dhcpdv6.pid");
 	}
+
+	/* kill any running dhcpleases6 */
 	if (isvalidpid("{$g['varrun_path']}/dhcpleases6.pid")) {
 		killbypid("{$g['varrun_path']}/dhcpleases6.pid");
 	}
@@ -2028,8 +2020,7 @@ EOD;
 
 	/* fire up dhcpd in a chroot */
 	if (count($dhcpdv6ifs) > 0) {
-		mwexec("/usr/local/sbin/dhcpd -6 -user dhcpd -group _dhcp -chroot {$g['dhcpd_chroot_path']} -cf /etc/dhcpdv6.conf -pf {$g['varrun_path']}/dhcpdv6.pid " .
-			join(" ", $dhcpdv6ifs));
+		mwexec("/usr/local/sbin/dhcpd -6 -user dhcpd -group _dhcp -chroot {$g['dhcpd_chroot_path']} -cf /etc/dhcpdv6.conf -pf {$g['varrun_path']}/dhcpdv6.pid " . join(" ", $dhcpdv6ifs));
 		mwexec("/usr/local/sbin/dhcpleases6 -c \"/usr/local/bin/php-cgi -f /usr/local/sbin/prefixes.php\" -l {$g['dhcpd_chroot_path']}/var/db/dhcpd6.leases");
 	}
 	if (platform_booting()) {
@@ -2107,9 +2098,9 @@ EOD;
 		}
 		$igmpconf .= "\n";
 		if ($igmpcf['type'] == 'upstream') {
-		       $upstream = true;	
+		       $upstream = true;
 		} else {
-		       $downstream = true;	
+		       $downstream = true;
 		}
 	}
 	foreach ($iflist as $ifn) {
@@ -2656,6 +2647,8 @@ function services_dnsmasq_configure($restart_dhcp = true) {
 
 		if (config_path_enabled('dnsmasq','strict_order')) {
 			$args .= " --strict-order ";
+		} else {
+			$args .= " --all-servers ";
 		}
 
 		if (config_path_enabled('dnsmasq','domain_needed')) {
@@ -2675,7 +2668,7 @@ function services_dnsmasq_configure($restart_dhcp = true) {
 		$args .= ' ' . implode(' ', array_values($standard_args));
 
 		/* run dnsmasq. Use "-C /dev/null" since we use command line args only (Issue #6730) */
-		$cmd = "/usr/local/sbin/dnsmasq --all-servers -C /dev/null {$dns_rebind} {$args}";
+		$cmd = "/usr/local/sbin/dnsmasq -C /dev/null {$dns_rebind} {$args}";
 		//log_error("dnsmasq command: {$cmd}");
 		mwexec_bg($cmd);
 		unset($args);
@@ -3172,7 +3165,7 @@ function services_dnsupdate_process($int = "", $updatehost = "", $forced = false
 			$wanip = get_interface_ip($if);
 			$bindipv4 = $wanip;
 		}
-		if (is_stf_interface($dnsupdate['interface'])) { 
+		if (is_stf_interface($dnsupdate['interface'])) {
 			$wanipv6 = get_interface_ipv6($dnsupdate['interface'] . '_stf');
 		} else {
 			$wanipv6 = get_interface_ipv6($if);
@@ -3187,7 +3180,7 @@ function services_dnsupdate_process($int = "", $updatehost = "", $forced = false
 		} elseif (!empty($dnsupdate['updatesource'])) {
 			/* Find the alternate binding address */
 			$bindipv4 = get_interface_ip($dnsupdate['updatesource']);
-			if (is_stf_interface($dnsupdate['interface'])) { 
+			if (is_stf_interface($dnsupdate['interface'])) {
 				$bindipv6 = get_interface_ipv6($dnsupdate['updatesource'] . '_stf');
 			} else {
 				$bindipv6 = get_interface_ipv6($dnsupdate['updatesource']);

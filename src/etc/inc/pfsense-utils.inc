@@ -699,9 +699,20 @@ function get_carp_status() {
 	return (intval($status) > 0);
 }
 
+/**
+ * Enable or disable CARP by toggling net.inet.carp.allow if necessary, enabling
+ * only if CARP VIPs are configured
+ */
+function enable_carp(bool $enable=true) {
+	$carp_enabled = get_carp_status();
+	$carplist = get_configured_vip_list('all', VIP_CARP);
+	if (($enable != $carp_enabled) && (!$enable || count($carplist) > 0)) {
+		set_single_sysctl("net.inet.carp.allow", $enable?"1":"0");
+	}
+}
+	
 /*
  * convert_ip_to_network_format($ip, $subnet): converts an ip address to network form
-
  */
 function convert_ip_to_network_format($ip, $subnet) {
 	$ipsplit = explode('.', $ip);
@@ -1890,8 +1901,16 @@ function pfsense_default_state_size() {
 	/* get system memory amount */
 	$memory = get_memory();
 	$physmem = $memory[0];
-	/* Be cautious and only allocate 10% of system memory to the state table */
-	$max_states = (int) ($physmem/10)*1000;
+
+	if ((int) $physmem > 0) {
+		/* Be cautious and only allocate 10% of system memory to the state table */
+		$max_states = (int) ($physmem/10)*1000;
+	} else {
+		/* If the memory check result is invalid, use a low but still
+		 * somewhat sane default (Equivalent to ~256MB RAM) */
+		$max_states = 25600;
+	}
+
 	return $max_states;
 }
 
@@ -3456,18 +3475,19 @@ function pkg_call_plugins($plugin_type, $plugin_params) {
 	global $g;
 	$results = array();
 	foreach (config_get_path('installedpackages/package') as $package) {
-		if (is_array($package['plugins']['item'])) {
-			foreach ($package['plugins']['item'] as $plugin) {
-				if ($plugin['type'] == $plugin_type) {
-					if (file_exists($package['include_file'])) {
-						require_once($package['include_file']);
-					} else {
-						continue;
-					}
-					$pkgname = substr(reverse_strrchr($package['configurationfile'], "."), 0, -1);
-					$plugin_function = $pkgname . '_'. $plugin_type;
-					$results[$pkgname] = call_user_func($plugin_function, $plugin_params);
+		foreach (array_get_path($package, 'plugins/item', []) as $plugin) {
+			if (!is_array($plugin) || empty($plugin)) {
+				continue;
+			}
+			if ($plugin['type'] == $plugin_type) {
+				if (file_exists($package['include_file'])) {
+					require_once($package['include_file']);
+				} else {
+					continue;
 				}
+				$pkgname = substr(reverse_strrchr($package['configurationfile'], "."), 0, -1);
+				$plugin_function = $pkgname . '_'. $plugin_type;
+				$results[$pkgname] = call_user_func($plugin_function, $plugin_params);
 			}
 		}
 	}
@@ -3589,6 +3609,32 @@ function is_url_hostname_resolvable($url) {
 	$resolvable = ($urlhostname !== gethostbyname($urlhostname));
 	putenv("RES_OPTIONS");
 	return $resolvable;
+}
+
+function get_pf_reserved(?string $name = '', bool $check_ifdescr = true):bool|array {
+	global $pf_reserved_keywords, $reserved_table_names, $FilterIflist;
+
+	// generate a list of assigned interfaces and interface groups
+	$iflist = $FilterIflist;
+	if (empty($iflist)) {
+		$iflist = config_get_path('interfaces', []);
+		foreach (config_get_path('ifgroups/ifgroupentry', []) as $ifgen) {
+			$iflist[$ifgen['ifname']] = $ifgen['ifname'];
+		}
+	}
+	$reserved = [];
+	foreach ($iflist as $ifconf) {
+		if (empty($ifconf['descr'])) {
+			continue;
+		}
+		if ($check_ifdescr) {
+			$reserved[] = strtoupper($ifconf['descr']);
+		}
+		$reserved[] = strtoupper($ifconf['descr'] . '__NETWORK');
+	}
+	$reserved = array_merge($pf_reserved_keywords, $reserved_table_names, $reserved);
+
+	return (empty($name) ? $reserved : in_array(strtoupper($name), $reserved));
 }
 
 function get_pf_timeouts () {

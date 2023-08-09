@@ -330,8 +330,8 @@ function applyVIP() {
 		@unlink("{$g['tmp_path']}/.firewall_virtual_ip.apply");
 	}
 	/* Before changing check #4633 */
-	if ($check_carp === true && !get_carp_status()) {
-		set_single_sysctl("net.inet.carp.allow", "1");
+	if ($check_carp === true) {
+		enable_carp();
 	}
 
 
@@ -526,6 +526,10 @@ function deleteVIP($id, $json = false) {
 				config_del_path("virtualip/vip");
 			}
 			write_config(gettext("Deleted a virtual IP."));
+
+			/* Reload filter since removed address may trigger changes in rules
+			 * https://redmine.pfsense.org/issues/13908 */
+			filter_configure();
 
 			if (!$json) {
 				header("Location: firewall_virtual_ip.php");

@@ -147,10 +147,11 @@ $ifdescs = get_configured_interface_with_descr();
 $iflist = filter_get_interface_list();
 
 if (!$if || !isset($iflist[$if])) {
-	if ($if != "any" && $if != "FloatingRules" && isset($iflist['wan'])) {
-		$if = "wan";
-	} else {
-		$if = "FloatingRules";
+	if ($if != 'any' &&
+	    $if != 'EthernetRules' &&
+	    $if != 'FloatingRules') {
+		/* default to the first configured interface */
+		$if = array_key_first($ifdescs);
 	}
 }
 
@@ -171,7 +172,7 @@ if ($_POST['act'] == "del") {
 		// Update the separators
 		init_config_arr(array('filter', 'separator', strtolower($if)));
 		$a_separators = &$config['filter']['separator'][strtolower($if)];
-		$ridx = ifridx($if, $_POST['id']);	// get rule index within interface
+		$ridx = abs(ifridx($if, $_POST['id']));	// get rule index within interface
 		$mvnrows = -1;
 		move_separators($a_separators, $ridx, $mvnrows);
 
@@ -210,10 +211,9 @@ if (isset($_POST['del_x'])) {
 
 			// Update the separators
 			// As rules are deleted, $ridx has to be decremented or separator position will break
-			if (count($_POST['rule']) == 1) { // Need special handling of single rule deletion
-				$ridx = ifridx($if, $rulei);
-			} else {
-				$ridx = ifridx($if, $rulei) - $num_deleted + 1;
+			$ridx = ifridx($if, $rulei);
+			if (count($_POST['rule']) != 1) {
+				$ridx = ($ridx < 0) ? abs($ridx) : $ridx - $num_deleted;
 			}
 
 			$mvnrows = -1;
@@ -337,7 +337,7 @@ if (isset($_POST['del_x'])) {
 	header("Location: firewall_rules.php?if=" . htmlspecialchars($if));
 	exit;
 } elseif (isset($_POST['dstif']) && !empty($_POST['dstif']) &&
-    isset($iflist[$_POST['dstif']]) && have_ruleint_access($_POST['dstif']) && 
+    isset($iflist[$_POST['dstif']]) && have_ruleint_access($_POST['dstif']) &&
     is_array($_POST['rule']) && count($_POST['rule'])) {
 	$confiflist = get_configured_interface_list();
 	/* Use this as a starting point and increase as we go, otherwise if the
@@ -348,7 +348,7 @@ if (isset($_POST['del_x'])) {
 		$filterent = $a_filter[$rulei];
 		$filterent['tracker'] = $tracker++;
 		$filterent['interface'] = $_POST['dstif'];
-		if ($_POST['convertif'] && ($if != $_POST['dstif']) &&
+		if (($_POST['convertif'] == 'true') && ($if != $_POST['dstif']) &&
 		    in_array($_POST['dstif'], $confiflist)) {
 			if (isset($filterent['source']['network']) &&
 			    ($filterent['source']['network'] == $if)) {
@@ -993,8 +993,10 @@ foreach ($a_filter as $filteri => $filterent):
 endforeach;
 
 // There can be separator(s) after the last rule listed.
-if ($seprows[$nrules]) {
-	display_separator($separators, $nrules, $columns_in_table);
+foreach ($seprows as $idx => $sep) {
+	if ($idx >= $nrules) {
+		display_separator($separators, $idx, $columns_in_table);
+	}
 }
 ?>
 				</tbody>
@@ -1065,7 +1067,7 @@ $modal->addInput(new Form_Checkbox(
 	'Enable Interface Address/Net conversion',
 	false
 ))->setHelp('Convert source Interface Address/Net definitions to the destination Interface Address/Net.%1$s' .
-	    'For example: LAN Address -> OPT1 Address, or LAN net -> OPT1 net.%1$s' . 
+	    'For example: LAN Address -> OPT1 Address, or LAN net -> OPT1 net.%1$s' .
 	    'Interface groups and some special interfaces (IPsec, OpenVPN), do not support this feature.', '<br />');
 $btncopyrules = new Form_Button(
 	'copyr',
@@ -1266,7 +1268,7 @@ events.push(function() {
 	$("#copyr").click(function() {
 		$("#rulescopy").modal('hide');
 		$("#dstif").val($("#copyr_dstif").val());
-		$("#convertif").val($("#copyr_convertif").val());
+		$("#convertif").val($("#copyr_convertif").prop('checked'));
 		document.getElementById('mainform').submit();
 	});
 

@@ -30,6 +30,9 @@ if (!function_exists("read_altq_config")) {
 if (!function_exists("console_configure")) {
 	require_once("/etc/inc/pfsense-utils.inc");
 }
+if (!function_exists("get_specialnet")) {
+	require_once("/etc/inc/util.inc");
+}
 
 /* Upgrade functions must be named:
  *    upgrade_XXX_to_YYY
@@ -6224,7 +6227,7 @@ function upgrade_207_to_208() {
 	$config['system']['hn_altq_enable'] = true;
 }
 
-/* Update IPsec VTI to new VTIMAP format 
+/* Update IPsec VTI to new VTIMAP format
  * https://redmine.pfsense.org/issues/9592
  */
 function upgrade_208_to_209() {
@@ -6390,17 +6393,13 @@ function upgrade_214_to_215() {
 
 /* Fix VTI interface numbers */
 function upgrade_215_to_216() {
-	global $config;
-
-	init_config_arr(array('ipsec', 'vtimaps', 'item'));
-
-	if (count($config['ipsec']['vtimaps']['item']) == 0) {
+	if (count(config_get_path('ipsec/vtimaps/item', [])) == 0) {
 		return;
 	}
 
 	/* Deprecated method. */
 	function upgrade216_ipsec_create_vtimap($ikeid, $idx) {
-		$assigned = array_column($config['ipsec']['vtimaps']['item'], 'ifnum');
+		$assigned = array_column(config_get_path('ipsec/vtimaps/item', []), 'ifnum');
 		asort($assigned, SORT_NUMERIC);
 		$new = 1;
 		foreach ($assigned as $ipsecifnum) {
@@ -6420,7 +6419,7 @@ function upgrade_215_to_216() {
 
 	$iflist = get_configured_interface_list_by_realif(true);
 
-	foreach ($config['ipsec']['vtimaps']['item'] as $idx => $vtimap) {
+	foreach (config_get_path('ipsec/vtimaps/item', []) as $idx => $vtimap) {
 		if ($vtimap['ifnum'] <= 32767) {
 			continue;
 		}
@@ -6440,11 +6439,10 @@ function upgrade_215_to_216() {
 
 		/* Interface is assigned */
 		if (isset($iflist[$old_if])) {
-			$config['interfaces'][$iflist[$old_if]]['if'] =
-			    'ipsec' . $new_vtimap['ifnum'];
+			config_set_path('interfaces/' . $iflist[$old_if] . '/if', 'ipsec' . $new_vtimap['ifnum']);
 		}
 
-		$config['ipsec']['vtimaps']['item'][$idx] = $new_vtimap;
+		config_set_path('ipsec/vtimaps/item/' . $idx, $new_vtimap);
 	}
 }
 
@@ -6785,6 +6783,93 @@ function upgrade_228_to_229() {
 	mwexec("$rrdtool tune {$rrddbpath}{$database} DS:userwire:GAUGE:{$valid}:0:10000000 2>&1");
 	mwexec("$rrdtool tune {$rrddbpath}{$database} DS:laundry:GAUGE:{$valid}:0:10000000 2>&1");
 	mwexec("$rrdtool tune {$rrddbpath}{$database} DS:buffers:GAUGE:{$valid}:0:10000000 2>&1");
+}
+
+function upgrade_229_to_230() {
+	/* The "target" GUI for outbound NAT rules now behaves similarly to other pages. */
+	$obn_rules = config_get_path('nat/outbound/rule', []);
+	foreach ($obn_rules as & $obent) {
+		if (empty($obent['target'])) {
+			// migrate interface address selection
+			$obent['target_type'] = $obent['interface'] . 'ip';
+			$obent['target'] = '';
+			$obent['target_subnet'] = '';
+		} elseif (str_contains($obent['target'], ':') ||
+		          str_contains($obent['target'], '.')) {
+			// migrate VIPs
+			if (get_specialnet($obent['target'])) {
+				$obent['target_type'] = $obent['target'];
+				$obent['target'] = '';
+			} else {
+				$obent['target_type'] = '';
+			}
+			$obent['target_subnet'] = '';
+		} elseif ($obent['target'] == 'other-subnet') {
+			// migrate custom subnets
+			$obent['target_type'] = 'network';
+			$obent['target'] = $obent['targetip'];
+			$obent['target_subnet'] = $obent['targetip_subnet'];
+		} else {
+			// migrate aliases
+			$obent['target_type'] = 'network';
+			$obent['target_subnet'] = '';
+		}
+		foreach (['targetip', 'targetip_subnet'] as $old) {
+			if (array_key_exists($old, $obent)) {
+				unset($obent[$old]);
+			}
+		}
+	}
+	if (isset($obent)) {
+		unset($obent);
+	}
+	config_set_path('nat/outbound/rule', $obn_rules);
+
+	/* A reserved keyword suffix has been added; migrate conflicting aliases */
+	$aliases = config_get_path('aliases/alias', []);
+	$aliases_rename = [];
+	$rename_suffix = '__RENAMED';
+	$reserved_suffix = '__NETWORK';
+	$interfaces = array_merge(array_column(config_get_path('interfaces', []), 'descr'),
+	                          array_column(config_get_path('ifgroups/ifgroupentry', []), 'ifname'));
+	foreach ($aliases as & $alias) {
+		// varify that a name exists; alias names cannot start with a number
+		if (empty($alias['name'])) {
+			continue;
+		}
+
+		// check if the alias could conflict
+		if ($alias['name'] == $reserved_suffix || !str_ends_with($alias['name'], $reserved_suffix)) {
+			continue;
+		}
+
+		// check if the alias would conflict with an interface name
+		if (!in_array(strstr($alias['name'], $reserved_suffix, true), $interfaces)) {
+			continue;
+		}
+
+		// alias conflicts, attempt to rename it and flag it for references update
+		if (in_array($alias['name'] . $rename_suffix, array_column($aliases, 'name'))) {
+			file_notice('Alias', gettext('The following alias conflicts with a reserved keyword and must' .
+			            ' be manually renamed: ' . $alias['name']));
+		} else {
+			$aliases_rename[] = $alias['name'];
+			$alias['name'] .= $rename_suffix;
+		}
+	}
+	if (isset($alias)) {
+		unset($alias);
+	}
+	if (!empty($aliases_rename)) {
+		// commit alias changes
+		config_set_path('aliases/alias', $aliases);
+		// update alias references
+		foreach ($aliases_rename as $conflicting_name) {
+			update_alias_name($conflicting_name . $rename_suffix, $conflicting_name);
+		}
+		file_notice('Alias', gettext('The following aliases conflict with a reserved keyword and have been renamed: ') .
+		            implode(', ', $aliases_rename));
+	}
 }
 
 /*

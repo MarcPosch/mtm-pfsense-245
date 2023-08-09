@@ -539,13 +539,9 @@ if ($_POST['apply']) {
 	do_input_validation($_POST, $reqdfields, $reqdfieldsn, $input_errors);
 
 	if (!$input_errors) {
-		/* Reserved name? */
-		global $pf_reserved_keywords, $reserved_table_names;
-		$pf_reserved_keywords = array_merge($pf_reserved_keywords, $reserved_table_names);
-		foreach ($pf_reserved_keywords as $rk) {
-			if (strcasecmp($rk, $_POST['descr']) == 0) {
-				$input_errors[] = sprintf(gettext("Cannot use a reserved keyword as an interface name: %s"), $rk);
-			}
+		/* Reserved name? Allow the reserved interface-network suffix since it is based on the interface name. */
+		if (get_pf_reserved($_POST['descr'], false) && !str_ends_with($_POST['descr'], '__NETWORK')) {
+			$input_errors[] = sprintf(gettext("Cannot use a reserved keyword as an interface name: %s"), $_POST['descr']);
 		}
 
 		/* description unique? */
@@ -784,6 +780,7 @@ if ($_POST['apply']) {
 	$staticroutes = get_staticroutes(true);
 	$_POST['spoofmac'] = strtolower(str_replace("-", ":", $_POST['spoofmac']));
 	if (($_POST['type'] == 'staticv4') && $_POST['ipaddr']) {
+		$_POST['ipaddr'] = trim($_POST['ipaddr']);
 		if (!is_ipaddrv4($_POST['ipaddr'])) {
 			$input_errors[] = gettext("A valid IPv4 address must be specified.");
 		} else {
@@ -816,7 +813,7 @@ if ($_POST['apply']) {
 		}
 	}
 	if (($_POST['type6'] == 'staticv6') && $_POST['ipaddrv6']) {
-		$_POST['ipaddrv6'] = addrtolower($_POST['ipaddrv6']);
+		$_POST['ipaddrv6'] = trim(addrtolower($_POST['ipaddrv6']));
 
 		if (!is_ipaddrv6($_POST['ipaddrv6'])) {
 			$input_errors[] = gettext("A valid IPv6 address must be specified.");
@@ -3778,7 +3775,10 @@ events.push(function() {
 		$('#country').children().remove();
 		$('#provider_list').children().remove();
 		$('#providerplan').children().remove();
-		$.ajax("getserviceproviders.php",{
+		$.ajax({
+			type: 'post',
+			url: 'getserviceproviders.php',
+			data: { get_country_list: true },
 			success: function(response) {
 
 				var responseTextArr = response.split("\n");

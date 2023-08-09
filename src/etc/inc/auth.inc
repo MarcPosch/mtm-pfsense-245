@@ -62,11 +62,11 @@ if (function_exists("display_error_form")) {
 			/* They may never see the error since the connection will be cut off, but try to be nice anyhow. */
 			display_error_form("501", gettext("Access Denied<br/><br/>Access attempt from a temporarily locked out client address.<br /><br />Try accessing the firewall again after the lockout expires."));
 			/* If they are locked out, they shouldn't have a state. Disconnect their connections. */
-			$retval = pfSense_kill_states(utf8_encode($_SERVER['REMOTE_ADDR']));
+			$retval = pfSense_kill_states($_SERVER['REMOTE_ADDR']);
 			if (is_ipaddrv4($_SERVER['REMOTE_ADDR'])) {
-				$retval = pfSense_kill_states("0.0.0.0/0", utf8_encode($_SERVER['REMOTE_ADDR']));
+				$retval = pfSense_kill_states("0.0.0.0/0", $_SERVER['REMOTE_ADDR']);
 			} elseif (is_ipaddrv6($_SERVER['REMOTE_ADDR'])) {
-				$retval = pfSense_kill_states("::", utf8_encode($_SERVER['REMOTE_ADDR']));
+				$retval = pfSense_kill_states("::", $_SERVER['REMOTE_ADDR']);
 			}
 			exit;
 		}
@@ -896,9 +896,9 @@ function local_user_set_groups($user, $new_groups = NULL) {
 		if ($groupname == '' || in_array($groupname, $cur_groups)) {
 			continue;
 		}
-		$group = &$groups[$groupindex[$groupname]];
-		$group['member'][] = $user['uid'];
-		$mod_groups[] = $group;
+		$ngroup = &$groups[$groupindex[$groupname]];
+		$ngroup['member'][] = $user['uid'];
+		$mod_groups[] = $ngroup;
 
 		/*
 		 * If it's a new user, make sure it is added before try to
@@ -908,6 +908,9 @@ function local_user_set_groups($user, $new_groups = NULL) {
 			local_user_set($user);
 		}
 	}
+	/* Clear $ngroup reference.
+	 * https://redmine.pfsense.org/issues/14363 */
+	unset($ngroup);
 
 	/* determine which memberships to remove */
 	foreach ($cur_groups as $groupname) {
@@ -917,19 +920,22 @@ function local_user_set_groups($user, $new_groups = NULL) {
 		if (!isset($groups[$groupindex[$groupname]])) {
 			continue;
 		}
-		$group = &$groups[$groupindex[$groupname]];
-		if (is_array($group['member'])) {
-			$index = array_search($user['uid'], $group['member']);
-			array_splice($group['member'], $index, 1);
-			$mod_groups[] = $group;
+		$cgroup = &$groups[$groupindex[$groupname]];
+		if (is_array($cgroup['member'])) {
+			$index = array_search($user['uid'], $cgroup['member']);
+			array_splice($cgroup['member'], $index, 1);
+			$mod_groups[] = $cgroup;
 		}
 	}
+	/* Clear $cgroup reference.
+	 * https://redmine.pfsense.org/issues/14363 */
+	unset($cgroup);
 
 	config_set_path('system/group', $groups);
 
 	/* sync all modified groups */
-	foreach ($mod_groups as $group) {
-		local_group_set($group);
+	foreach ($mod_groups as $mgroup) {
+		local_group_set($mgroup);
 	}
 }
 
@@ -2097,6 +2103,12 @@ function session_auth() {
 		return false;
 	}
 
+	// Detect IP change
+	if ((!isset($_POST['login'])) && (config_get_path('system/webgui/roaming') == 'disabled') && (!empty($_SESSION['REMOTE_ADDR']) && $_SESSION['REMOTE_ADDR'] != $_SERVER['REMOTE_ADDR'])) {
+		phpsession_end();
+		return false;
+	}
+
 	/* Validate incoming login request */
 	$attributes = array('nas_identifier' => 'webConfigurator-' . gethostname());
 	if (isset($_POST['login']) && !empty($_POST['usernamefld'])) {
@@ -2120,6 +2132,7 @@ function session_auth() {
 			$_SESSION['user_radius_attributes'] = $attributes;
 			$_SESSION['last_access'] = time();
 			$_SESSION['protocol'] = config_get_path('system/webgui/protocol');
+			$_SESSION['REMOTE_ADDR'] = $_SERVER['REMOTE_ADDR'];
 			phpsession_end(true);
 			log_auth(sprintf(gettext("Successful login for user '%1\$s' from: %2\$s"), $_POST['usernamefld'], get_user_remote_address() . get_user_remote_authsource()));
 			if (isset($_POST['postafterlogin'])) {
@@ -2313,7 +2326,7 @@ EOD;
 				$radius_conf .= "acct {$authcfg['host']}:{$authcfg['radius_acct_port']} " .
 					"{$authcfg['radius_secret']} {$authcfg['radius_timeout']}\n";
 			}
-			
+
 			$pam_sshd =<<<EOD
 # auth
 auth            sufficient      pam_radius.so
@@ -2373,7 +2386,7 @@ EOD;
 					$ldappamcafile = "/var/etc/pam_ldap_ca.crt";
 					$ca['caref'] = $authcfg['ldap_caref'];
 					$cacrt = ca_chain($ca);
-					@file_put_contents($ldappamcafile, $cacrt); 
+					@file_put_contents($ldappamcafile, $cacrt);
 					$ldapconf .= "tls_cacertfile {$ldappamcafile}\n";
 				}
 				$ldapconf .= "tls_checkpeer yes\n";

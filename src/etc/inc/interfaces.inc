@@ -1072,16 +1072,16 @@ function interface_gre_configure(&$gre, $grekey = "", $flush = true) {
 
 	/* Do not change the order here for more see gre(4) NOTES section. */
 	if (is_ipaddrv6($gre['remote-addr'])) {
-		mwexec("/sbin/ifconfig {$greif} inet6 tunnel {$realifip6} " . escapeshellarg($gre['remote-addr']));
+		mwexec("/sbin/ifconfig " . escapeshellarg($greif) . " inet6 tunnel " . escapeshellarg($realifip6) . " " . escapeshellarg($gre['remote-addr']));
 	} else {
-		mwexec("/sbin/ifconfig {$greif} tunnel {$realifip} " . escapeshellarg($gre['remote-addr']));
+		mwexec("/sbin/ifconfig " . escapeshellarg($greif) . " tunnel " . escapeshellarg($realifip) . " " . escapeshellarg($gre['remote-addr']));
 	}
 	if (in_array($tunnel_type, array('v4', 'v4v6'))) {
-		mwexec("/sbin/ifconfig {$greif} " . escapeshellarg($gre['tunnel-local-addr']) . " " . escapeshellarg($gre['tunnel-remote-addr']) . " netmask " . gen_subnet_mask($gre['tunnel-remote-net']));
+		mwexec("/sbin/ifconfig " . escapeshellarg($greif) . " " . escapeshellarg($gre['tunnel-local-addr']) . " " . escapeshellarg($gre['tunnel-remote-addr']) . " netmask " . gen_subnet_mask($gre['tunnel-remote-net']));
 	}
 	if (in_array($tunnel_type, array('v6', 'v4v6'))) {
 		/* XXX: The prefixlen argument for tunnels of ipv6 is useless since it needs to be 128 as enforced by kernel */
-		mwexec("/sbin/ifconfig {$greif} inet6 " . escapeshellarg($gre['tunnel-local-addr6']) . " " . escapeshellarg($gre['tunnel-remote-addr6']) . " prefixlen 128");
+		mwexec("/sbin/ifconfig " . escapeshellarg($greif) . " inet6 " . escapeshellarg($gre['tunnel-local-addr6']) . " " . escapeshellarg($gre['tunnel-remote-addr6']) . " prefixlen 128");
 	}
 
 	$parentif = get_real_interface($gre['if']);
@@ -1212,6 +1212,11 @@ function interface_gif_configure(&$gif, $gifkey = "", $flush = true) {
 		log_error(gettext("could not bring parentif up -- variable not defined -- interface_gif_configure()"));
 	}
 
+	/* some kernels may need to load if_gif */
+	if (!is_module_loaded("if_gif")) {
+		mwexec("/sbin/kldload if_gif");
+	}
+
 	if (platform_booting() || !(empty($gif['gifif']))) {
 		pfSense_interface_destroy($gif['gifif']);
 		pfSense_interface_create2($gif['gifif']);
@@ -1222,16 +1227,16 @@ function interface_gif_configure(&$gif, $gifkey = "", $flush = true) {
 
 	/* Do not change the order here for more see gif(4) NOTES section. */
 	if (is_ipaddrv6($gif['remote-addr'])) {
-		mwexec("/sbin/ifconfig {$gifif} inet6 tunnel {$realifip} " . escapeshellarg($gif['remote-addr']));
+		mwexec("/sbin/ifconfig " . escapeshellarg($gifif) . " inet6 tunnel " . escapeshellarg($realifip) . " " . escapeshellarg($gif['remote-addr']));
 	} else {
-		mwexec("/sbin/ifconfig {$gifif} tunnel {$realifip} " . escapeshellarg($gif['remote-addr']));
+		mwexec("/sbin/ifconfig " . escapeshellarg($gifif) . " tunnel " . escapeshellarg($realifip) . " " . escapeshellarg($gif['remote-addr']));
 	}
 	if ((is_ipaddrv6($gif['tunnel-local-addr'])) || (is_ipaddrv6($gif['tunnel-remote-addr']))) {
 		/* XXX: The prefixlen argument for tunnels of ipv6 is useless since it needs to be 128 as enforced by kernel */
 		//mwexec("/sbin/ifconfig {$gifif} inet6 " . escapeshellarg($gif['tunnel-local-addr']) . " " . escapeshellarg($gif['tunnel-remote-addr']) . " prefixlen /" . escapeshellarg($gif['tunnel-remote-net']));
-		mwexec("/sbin/ifconfig {$gifif} inet6 " . escapeshellarg($gif['tunnel-local-addr']) . " " . escapeshellarg($gif['tunnel-remote-addr']) . " prefixlen 128");
+		mwexec("/sbin/ifconfig " . escapeshellarg($gifif) . " inet6 " . escapeshellarg($gif['tunnel-local-addr']) . " " . escapeshellarg($gif['tunnel-remote-addr']) . " prefixlen 128");
 	} else {
-		mwexec("/sbin/ifconfig {$gifif} " . escapeshellarg($gif['tunnel-local-addr']) . " " . escapeshellarg($gif['tunnel-remote-addr']) . " netmask " . gen_subnet_mask($gif['tunnel-remote-net']));
+		mwexec("/sbin/ifconfig " . escapeshellarg($gifif) . " " . escapeshellarg($gif['tunnel-local-addr']) . " " . escapeshellarg($gif['tunnel-remote-addr']) . " netmask " . gen_subnet_mask($gif['tunnel-remote-net']));
 	}
 	if (isset($gif['link1'])) {
 		pfSense_interface_flags($gifif, IFF_LINK1);
@@ -1252,7 +1257,7 @@ function interface_gif_configure(&$gif, $gifkey = "", $flush = true) {
 		}
 		if (is_numericint($gifmtu)) {
 			if ($gifmtu != $currentgifmtu) {
-				mwexec("/sbin/ifconfig {$gifif} mtu {$gifmtu}");
+				mwexec("/sbin/ifconfig " . escapeshellarg($gifif) . " mtu {$gifmtu}");
 			}
 		}
 	} else {
@@ -2820,11 +2825,9 @@ function interfaces_sync_setup() {
 		mwexec("/sbin/ifconfig pfsync0 -syncdev -syncpeer down");
 	}
 
-	$carplist = get_configured_vip_list('all', VIP_CARP);
-	if (is_array($carplist) && count($carplist) > 0) {
-		set_single_sysctl("net.inet.carp.allow", "1");
-	} else {
-		set_single_sysctl("net.inet.carp.allow", "0");
+	/* Don't enable CARP if we haven't booted */
+	if (!is_platform_booting()) {
+		enable_carp();
 	}
 
 	if (platform_booting()) {
@@ -2957,7 +2960,7 @@ function interfaces_vips_configure($interface = "") {
 		return;
 	}
 
-	$carp_setuped = false;
+	$carp_configured = false;
 	$anyproxyarp = false;
 	foreach ($vips as $vip) {
 		if ($interface <> "" &&
@@ -2976,14 +2979,15 @@ function interfaces_vips_configure($interface = "") {
 				interface_ipalias_configure($vip);
 				break;
 			case "carp":
-				if ($carp_setuped == false) {
-					$carp_setuped = true;
+				if ($carp_configured == false) {
+					$carp_configured = true;
 				}
 				interface_carp_configure($vip);
 				break;
 		}
 	}
-	if ($carp_setuped == true) {
+	/* interfaces_sync_setup() is directly called in rc.bootup*/
+	if (!is_platform_booting() && $carp_configured == true) {
 		interfaces_sync_setup();
 	}
 	if ($anyproxyarp == true) {
@@ -4880,8 +4884,7 @@ function interface_dhcpv6_configure($ifconf, $ifcfg, $destroy = false) {
 		$dhcp6cscriptwithoutra .= "echo \$dreason > /tmp/{$wanif}_reason\n";
 		$dhcp6cscriptwithoutra .= "case \$REASON in\n";
 		$dhcp6cscriptwithoutra .= "REQUEST)\n";
-		$dhcp6cscriptwithoutra .= "/bin/sleep 2\n";
-		$dhcp6cscriptwithoutra .= "/usr/sbin/rtsold -1 -p {$g['varrun_path']}/rtsold_{$wanif}.pid -M {$g['varetc_path']}/rtsold_{$wanif}_script.sh -O {$g['varetc_path']}/rtsold_{$wanif}_script.sh {$wanif}\n";
+		$dhcp6cscriptwithoutra .= "/usr/sbin/rtsold -1 -p {$g['varrun_path']}/rtsold_{$wanif}.pid -A {$g['varetc_path']}/rtsold_{$wanif}_script.sh {$wanif}\n";
 		if ($debugOption == '-D') {
 			$dhcp6cscriptwithoutra .= "/usr/bin/logger -t dhcp6c \"dhcp6c REQUEST on {$wanif} - running rtsold\"\n";
 		}
@@ -5113,8 +5116,7 @@ EOD;
 			sleep(2);
 			mwexec("/usr/sbin/rtsold -1 " .
 			    "-p {$g['varrun_path']}/rtsold_{$realif}.pid " .
-			    "-M {$g['varetc_path']}/rtsold_{$realif}_script.sh " .
-			    "-O {$g['varetc_path']}/rtsold_{$realif}_script.sh " .
+			    "-A {$g['varetc_path']}/rtsold_{$realif}_script.sh " .
 			    $realif);
 		}
 	} else {
@@ -6822,7 +6824,7 @@ function is_altq_capable($int) {
 	$capable = array("ae", "age", "alc", "ale", "an", "aue", "axe", "bce",
 			"bfe", "bge", "bnxt", "bridge", "bxe", "cas", "cpsw", "dc", "de",
 			"ed", "em", "ep", "epair", "et", "fxp", "gem", "hme", "hn",
-			"igb", "igc", "ix", "jme", "l2tp", "le", "lem", "msk", "mxge", "my",
+			"igb", "igc", "ix", "ixv", "jme", "l2tp", "le", "lem", "msk", "mxge", "my",
 			"ndis", "nfe", "ng", "nge", "npe", "nve", "ql", "ovpnc",
 			"ovpns", "ppp", "pppoe", "pptp", "re", "rl", "sf", "sge",
 			"sis", "sk", "ste", "stge", "ti", "tun", "txp", "udav",
@@ -7132,11 +7134,11 @@ function interfaces_staticarp_configure($if) {
 		echo "interfaces_staticarp_configure($if) being called $mt\n";
 	}
 
-	$ifcfg = config_get_path("interfaces/{$if}");
-
-	if (!$ifcfg['if'] || !$ifcfg['enable']) {
+	if (!config_path_enabled("interfaces/{$if}")) {
 		return 0;
 	}
+
+	$ifcfg = config_get_path("interfaces/{$if}");
 
 	/* Enable staticarp, if enabled */
 	$staticarp = config_get_path("dhcpd/{$if}/staticarp");
@@ -7558,5 +7560,42 @@ function get_interface_addresses($interface) {
 	unset($ifaddrs['addrs6']);
 
 	return($ifaddrs);
+}
+
+/**
+ * Returns all interface addresses, including IPv6 LL addresses.
+ * XXX: Review/refactor functions used to retrieve interfaces addresses.
+ */
+function get_interface_addresses_all(string $interface): array {
+	$addresses = [];
+
+	// Get primary IPv4/6 addresses
+	$addresses_primary = get_interface_addresses($interface);
+	if (!empty($addresses_primary['ipaddr'])) {
+		$addresses[] = $addresses_primary['ipaddr'];
+	}
+	if (!empty($addresses_primary['ipaddr6'])) {
+		$addresses[] = $addresses_primary['ipaddr6'];
+	}
+
+	// Get IPv6 link-local address
+	$addresses_linklocal = find_interface_ipv6_ll($interface);
+	if (!empty($addresses_linklocal)) {
+		$addresses_linklocal_pos = strpos($addresses_linklocal, '%');
+		if ($addresses_linklocal_pos !== false) {
+			$addresses_linklocal = substr($addresses_linklocal, 0, $addresses_linklocal_pos);
+		}
+		$addresses[] = $addresses_linklocal;
+	}
+
+	// Get VIPs
+	foreach (array_keys(get_configured_vip_list()) as $viface) {
+		$vip = get_configured_vip($viface);
+		if ($vip['interface'] == $interface && !empty($vip['subnet'])) {
+			$addresses[] = $vip['subnet'];
+		}
+	}
+
+	return $addresses;
 }
 ?>

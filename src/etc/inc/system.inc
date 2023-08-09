@@ -216,6 +216,8 @@ function system_resolvconf_generate($dynupdate = false) {
 	// set up or tear down static routes for DNS servers
 	$dnscounter = 1;
 	$dnsgw = "dns{$dnscounter}gw";
+	$exempt_addresses = array_unique(array_merge(get_interface_addresses_all('lo0'),
+	    get_configured_ip_addresses(), get_configured_ipv6_addresses()));
 	while (!empty(config_get_path("system/{$dnsgw}"))) {
 		/* setup static routes for dns servers */
 		$gwname = config_get_path("system/{$dnsgw}");		unset($gatewayip);
@@ -227,14 +229,16 @@ function system_resolvconf_generate($dynupdate = false) {
 		/* dns server array starts at 0 */
 		$dnsserver = $syscfg['dnsserver'][$dnscounter - 1];
 
-		/* specify IP protocol version for correct add/del,
-		 * see https://redmine.pfsense.org/issues/11578 */
-		if (is_ipaddrv4($dnsserver)) {
-			$ipprotocol = 'inet';
-		} else {
-			$ipprotocol = 'inet6';
-		}
-		if (!empty($dnsserver)) {
+		/* Only modify routes for non-interface addresses;
+		 * see https://redmine.pfsense.org/issues/14288 */
+		if (!empty($dnsserver) && !in_array($dnsserver, $exempt_addresses)) {
+			// specify IP protocol version for correct add/del
+			if (is_ipaddrv4($dnsserver)) {
+				$ipprotocol = 'inet';
+			} else {
+				$ipprotocol = 'inet6';
+			}
+
 			if (is_ipaddr($gatewayip)) {
 				route_add_or_change($dnsserver, $gatewayip, '', '', $ipprotocol);
 			} else {
@@ -1474,6 +1478,18 @@ EOD;
 
 	}
 
+	$plugin_locations = "";
+	if ($captive_portal == false) {
+		$pluginparams = [ 'section' => 'location' ];
+		foreach (pkg_call_plugins('plugin_nginx', $pluginparams) as $pkgname => $location) {
+			if (empty($location)) {
+				continue;
+			}
+			$plugin_locations .= "# Plugin Locations ({$pkgname})\n";
+			$plugin_locations .= "{$location}\n";
+		}
+	}
+
 	$nginx_config .= <<<EOD
 		root "{$document_root}";
 		location / {
@@ -1506,6 +1522,7 @@ EOD;
 			fastcgi_read_timeout 360;
 			include        /usr/local/etc/nginx/fastcgi_params;
 		}
+		{$plugin_locations}
 	}
 
 EOD;
@@ -1553,6 +1570,17 @@ EOD;
 	}
 
 EOD;
+	}
+
+	if ($captive_portal == false) {
+		$pluginparams = [ 'section' => 'server' ];
+		foreach (pkg_call_plugins('plugin_nginx', $pluginparams) as $pkgname => $server) {
+			if (empty($server)) {
+				continue;
+			}
+			$nginx_config .= "	# Plugin Servers ({$pkgname})\n";
+			$nginx_config .= "{$server}\n";
+		}
 	}
 
 	$nginx_config .= "}\n";
@@ -2307,6 +2335,8 @@ function system_reboot_cleanup() {
 
 	require_once("voucher.inc");
 	voucher_save_db_to_config();
+	require_once("pfsense-utils.inc");
+	enable_carp(false);
 	require_once("pkg-utils.inc");
 	stop_packages();
 }

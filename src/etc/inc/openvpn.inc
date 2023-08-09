@@ -899,7 +899,7 @@ function openvpn_reconfigure($mode, $settings) {
 	// OpenVPN defaults to SHA1, so use it when unset to maintain compatibility.
 	$digest = !empty($settings['digest']) ? $settings['digest'] : "SHA1";
 
-	$interface = get_failover_interface($settings['interface']);
+	$interface = $settings['interface'];
 	// The IP address in the settings can be an IPv4 or IPv6 address associated with the interface
 	$ipaddr = $settings['ipaddr'];
 
@@ -1242,7 +1242,9 @@ function openvpn_reconfigure($mode, $settings) {
 			list($ip, $cidr) = openvpn_gen_tunnel_network($settings['tunnel_network']);
 			$mask = gen_subnet_mask($cidr);
 			list($ip1, $ip2) = openvpn_get_interface_ip($ip, $cidr);
-			if ($settings['dev_mode'] == 'tun') {
+			if (($settings['dev_mode'] == 'tun') &&
+			    (($settings['topology'] == 'net30') ||
+			    ($cidr >= 30))) {
 				$conf .= "ifconfig {$ip2} {$ip1}\n";
 			} else {
 				$conf .= "ifconfig {$ip2} {$mask}\n";

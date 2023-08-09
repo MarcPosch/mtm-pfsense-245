@@ -82,7 +82,7 @@ $g = [
 	'disablehelpicon' => false,
 	'disablecrashreporter' => false,
 	'debug' => false,
-	'latest_config' => '22.9',
+	'latest_config' => '23.0',
 	'minimum_ram_warning' => '101',
 	'minimum_ram_warning_text' => '128 MB',
 	'wan_interface_name' => 'wan',
@@ -140,6 +140,8 @@ if (file_exists($flavor_file)) {
 }
 
 $g['openvpn_base'] = g_get('varetc_path') . '/openvpn';
+
+$g['pkg_repos_path'] = '/usr/local/etc/' . $g['product_name'] . '/pkg/repos';
 
 /* Default sysctls */
 global $sysctls;
@@ -216,7 +218,7 @@ $factory_default_checkipservice = [
 ];
 
 global $dyndns_split_domain_types;
-$dyndns_split_domain_types = ['namecheap', 'cloudflare', 'cloudflare-v6', 'gratisdns', 'cloudns', 'godaddy', 'godaddy-v6', 'linode', 'linode-v6'];
+$dyndns_split_domain_types = ['namecheap', 'cloudflare', 'cloudflare-v6', 'gratisdns', 'cloudns', 'godaddy', 'godaddy-v6', 'linode', 'linode-v6', 'porkbun', 'porkbun-v6'];
 
 // pf tokens from FreeBSD source /sbin/pfctl/parse.y
 global $pf_reserved_keywords;
