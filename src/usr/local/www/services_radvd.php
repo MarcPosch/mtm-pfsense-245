@@ -79,7 +79,7 @@ if (!empty(config_get_path("dhcpdv6/{$if}"))) {
 	$pconfig['rasamednsasdhcp6'] = isset($config['dhcpdv6'][$if]['rasamednsasdhcp6']);
 
 	$pconfig['subnets'] = config_get_path("dhcpdv6/{$if}/subnets/item");
-	$pconfig['routes'] = config_get_path("dhcpdv6/{$if}/routes/item")";
+	$pconfig['routes'] = config_get_path("dhcpdv6/{$if}/routes/item");
 }
 if (!is_array($pconfig['subnets'])) {
 	$pconfig['subnets'] = array();
@@ -521,12 +521,18 @@ foreach ($pconfig['routes'] as $route) {
 	$section->add($group);
 	$route_counter++;
 }
-$section->addInput(new Form_Button(
+
+$group = new Form_Group(null);
+$input = new Form_Button(
 	'addrow_routes',
 	'Add',
 	null,
 	'fa-plus'
-))->addClass('btn-success');
+);
+$input->addClass('btn-success');
+$group->add($input);
+
+$section->add($group);
 /*-----------------------------------------------------------------------------*/
 $group->add($input);
 
