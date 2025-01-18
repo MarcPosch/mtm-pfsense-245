@@ -170,7 +170,7 @@ if ($_POST['save']) {
 		} else {
 			$pconfig['routes'][] = array('destination' => $address . "/" . $bits, 'priority' => $priority);
 			if (!is_ipaddrv6($address)) {
-				$input_errors[] = sprintf(gettext("An invalid route was specified. [%s/%s]"), $address, $bits);
+				$input_errors[] = sprintf(gettext("An invalid route was specified. [%1$s/%2$s]"), $address, $bits);
 			}
 		}
 	}
